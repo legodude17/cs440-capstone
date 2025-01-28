@@ -1,8 +1,12 @@
-# Arimaa Bot(s)
+# Arimaa Algorithm Exploration
 
-> A main arimaa bot and a bunch of supporting infrastructure
+> A project comparing different algorithms using Arimaa
 
-The main bot of the project is housed in `MCTSPlayer.py`. It is an Arimaa bot using the Monte-Carlo Tree Search algorithm.
+This will eventually contain many different bots that use different algorithms, but for now there's only a few bots and one algorithm. Here's the list:
+
+- `HumanPlayer` is a way for you to play against a bot yourself. It will prompt you for your move when it's your turn.
+- `RandomPlayer` is a very simple bot that makes completely random moves.
+- `MCTSPlayer` is the only algorithm that I've implemented so far, it uses the Monte-Carlo Tree Search algorithm.
 
 ## Best Initial
 
@@ -13,7 +17,9 @@ The MCTS bot starts with the best initial setup by total wins from existing game
 
 ## Arguments
 
-The MCTS bot takes two arguments: 1) the allowed time to calculate each step and 2) the number of times to simulate each node to determine it's winrate. Increase them both to increase the difficulty. However, do note that since there are four steps in a move each turn will actually take 4 times longer than the allowed time, as well as some extra for the game logic.
+Every most of the bots take arguments, which generally determine how successful they are, at the cost of taking longer.
+
+The MCTS bot takes two arguments: 1) the allowed time to calculate each step and 2) the number of times to simulate each node to determine it's winrate. Increase them both to increase the difficulty. However, do note that since there are up to four steps in a move each turn will actually take 4 times longer than the allowed time, as well as some extra for the game logic.
 
 ## Examples
 
@@ -36,21 +42,12 @@ To start a 10 round tournament of random bot, a MCTS bot with 1 second based on 
 - `RandomPlayer.py` contains a player that makes random moves
 - `read_gamedata.py` contains a script to determine the best initial setups by total wins
 - `README.md` is the document you are reading
-- `tournament.py` is class that runs a round-robin tournament between an arbitrary number of players
-
-## Next Steps
-
-The main next steps would be making more bots, and I can think of a few interesting ideas for one:
-
-- A minimax bot. This would be interesting as due to the huge branching factor (up to 200,000), it would most likely have to instead use a random subset of nodes. It could be expanded to use a neural network as the evaluator instead of a written function.
-- A neural network bot. Basically train a neural network on the game data to predict the next move, then use it as a bot.
-- An AlphaZero-style bot that learns via self-play. This would be a lot of work but it'd be theoretically possible to reimplement AlphaZero from the paper but for Arimaa. However, there's no way I could get enough computing power to train it properly (the team behind leela-zero estimates it'd take 1700 years with commercially available hardware).
+- `tournament.py` contains a class that runs a round-robin tournament between an arbitrary number of players
 
 ## Sources
 
 - The [Arimaa Game Rules](http://arimaa.com/arimaa/learn/rules.pdf)
 - The [Arimaa Notation Explainer](http://arimaa.com/arimaa/learn/notation.html)
-- [leela-zero's readme](https://github.com/leela-zero/leela-zero/blob/next/README.md) (for the estimate of the time to train an AlphaZero-style bot)
 - The [Wikipedia page for Monte-Carlo Tree Search](https://en.wikipedia.org/wiki/Monte_Carlo_tree_search) was surprisingly informative
 - [wlongxiang/mcts](https://github.com/wlongxiang/mcts/blob/main/monte_carlo_tree_search.py) is an excellent example of how to implement MCTS in python
 - A whole bunch of documentation pages for python, pandas, etc.
