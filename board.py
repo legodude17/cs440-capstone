@@ -158,11 +158,11 @@ def all_positions() -> Generator[Pos, Any, Any]:
     for j in range(8):
       yield (i, j) # type: ignore
 
-Self = TypeVar("Self", bound="Move")
+Self = TypeVar("Self", bound="Step")
 
-class Move:
+class Step:
   """
-  Represents a single move (in the game rules, this is called a step)
+  Represents a single step
   """
   oldPos: Pos # The old position of the piece
   newPos: Pos # The new position of the piece
@@ -172,9 +172,9 @@ class Move:
   @staticmethod
   def create(oldPos: Pos, newPos: Pos) -> Self: # type: ignore
     """
-    Create a move with no push or pull
+    Create a step with no push or pull
     """
-    move = Move()
+    move = Step()
     move.oldPos = oldPos
     move.newPos = newPos
     move.opOldPos = None
@@ -184,14 +184,16 @@ class Move:
   @staticmethod
   def create_push(oldPos: Pos, newPos: Pos, opOldPos: Pos, opNewPos: Pos) -> Self: # type: ignore
     """
-    Create a move that has a push or pull
+    Create a step that has a push or pull
     """
-    move = Move()
+    move = Step()
     move.oldPos = oldPos
     move.newPos = newPos
     move.opOldPos = opOldPos
     move.opNewPos = opNewPos
     return move # type: ignore
+  
+Move = tuple[Step] | tuple[Step, Step] | tuple[Step, Step, Step] | tuple[Step, Step, Step, Step]
 
 class StateException(Exception):
   """
@@ -273,22 +275,22 @@ class Board:
     """
     return (piece for row in self._data for piece in row)
 
-  def do_move(self, move: Move):
+  def do_step(self, step: Step):
     """
-    Execute a move and modify the state as needed
+    Execute a single step and modify the state as needed
     """
-    toMove = self[move.oldPos]
+    toMove = self[step.oldPos]
     if toMove == None:
       raise StateException("No piece at starting location.")
     color, rank = parse_piece(toMove)
     if color != self.state.player:
       raise StateException("Cannot move opponents pieces.")
-    if self.is_frozen(move.oldPos):
+    if self.is_frozen(step.oldPos):
       raise StateException("Cannot move a frozen piece.")
 
     enemy = None
-    if move.opOldPos != None:
-      enemy = self[move.opOldPos]
+    if step.opOldPos != None:
+      enemy = self[step.opOldPos]
       if enemy == None:
         raise StateException("No piece at enemy location.")
       opColor, opRank = parse_piece(enemy)
@@ -298,19 +300,19 @@ class Board:
         raise StateException("Cannot push or pull higher rank pieces.")
 
     # You can move on top of a piece if you're pushing it
-    if self[move.newPos] != None and move.newPos != move.opOldPos:
+    if self[step.newPos] != None and step.newPos != step.opOldPos:
       raise StateException("Cannot move on top of another piece.")
     
     # You can move an enemy on top of piece if you're pulling it
-    if move.opNewPos != None and self[move.opNewPos] != None and move.oldPos != move.opNewPos:
+    if step.opNewPos != None and self[step.opNewPos] != None and step.oldPos != step.opNewPos:
       raise StateException("Cannot push a piece on top of another piece.")
     
-    self[move.oldPos] = None
-    if move.opOldPos != None:
-      self[move.opOldPos] = None
-    self[move.newPos] = toMove
-    if move.opNewPos != None:
-      self[move.opNewPos] = enemy
+    self[step.oldPos] = None
+    if step.opOldPos != None:
+      self[step.opOldPos] = None
+    self[step.newPos] = toMove
+    if step.opNewPos != None:
+      self[step.opNewPos] = enemy
 
     self._check_traps()
 
@@ -402,7 +404,7 @@ class Board:
       return win
     
     # If the current player has no possible moves, their opponent wins
-    if not any(self.possible_moves()):
+    if not any(self.possible_steps()):
       return 1 - self.state.player
     
     return None
@@ -429,9 +431,9 @@ class Board:
         helped = True
     return frozen and not helped
   
-  def possible_moves(self):
+  def possible_steps(self):
     """
-    Obtain all possible moves for the current player
+    Obtain all possible steps for the current player
     """
     for pos in all_positions():
       piece = self[pos]
@@ -455,18 +457,18 @@ class Board:
       for pos2 in neighbors(pos, exclude):
         enemy = self[pos2]
         if enemy == None:
-          yield Move.create(pos, pos2)
+          yield Step.create(pos, pos2)
         else:
           color2, rank2 = parse_piece(enemy)
           if color != color2 and rank > rank2:
             for pos3 in neighbors(pos2):
               if self[pos3] == None:
                 # Push the enemy onto a tile adjacent to them, then move to their old position
-                yield Move.create_push(pos, pos2, pos2, pos3)
+                yield Step.create_push(pos, pos2, pos2, pos3)
             for pos3 in neighbors(pos):
               if self[pos3] == None:
                 # Step into an adjacent tile, them pull the enemy to my old tile
-                yield Move.create_push(pos, pos3, pos2, pos)
+                yield Step.create_push(pos, pos3, pos2, pos)
 
   def print(self):
     """
@@ -518,22 +520,22 @@ class Board:
         self[pos] = char_to_piece(c)
       i += 1
 
-  def parse_move(self, val: str, push: str | None):
+  def parse_step(self, val: str, push: str | None):
     """
-    Parse a move string with optional push into a Move object
+    Parse a step string with optional push into a Move object
     """
-    def parse_step(val: str) -> tuple[Pos, Pos]:
+    def parse_part(val: str) -> tuple[Pos, Pos]:
       if len(val) != 4:
-        raise ValueError("This is probably an initial placement, not a move")
+        raise ValueError("This is probably an initial placement, not a step")
       if val[3] == "x":
         raise ValueError("This is an elimination, not a move")
       pos: Pos = (ord(val[1]) - 97, 8 - int(val[2])) # type: ignore
       piece = self[pos]
       if piece == None:
-        raise StateException("Move is invalid, no piece at starting location.")
+        raise StateException("Step is invalid, no piece at starting location.")
       char = piece_to_char(piece)
       if char != val[0]:
-        raise StateException("Move is invalid, wrong piece at starting location")
+        raise StateException("Step is invalid, wrong piece at starting location")
       dir = val[3]
       x, y = pos
       if dir == "n":
@@ -548,23 +550,23 @@ class Board:
         raise ValueError("Invalid direction: " + dir)
       return pos, (x, y) # type: ignore
 
-    oldPos, newPos = parse_step(val)
+    oldPos, newPos = parse_part(val)
     opOldPos = None
     opNewPos = None
     if push != None:
-      opOldPos, opNewPos = parse_step(push)
-    move = Move()
+      opOldPos, opNewPos = parse_part(push)
+    move = Step()
     move.oldPos = oldPos
     move.newPos = newPos
     move.opOldPos = opOldPos
     move.opNewPos = opNewPos
     return move
   
-  def move_str(self, move: Move) -> tuple[str, str | None]:
+  def step_str(self, move: Step) -> tuple[str, str | None]:
     """
-    Turn a move into a string, and maybe a push string as well
+    Turn a step into a string, and maybe a push string as well
     """
-    def str_step(oldPos: Pos, newPos: Pos):
+    def part_str(oldPos: Pos, newPos: Pos):
       char = piece_to_char(self[oldPos]) # type: ignore
       x, y = oldPos
       pos = chr(x + 97) + str(8 - y)
@@ -585,8 +587,8 @@ class Board:
       return char + pos + dir
     push = None
     if move.opOldPos != None and move.opNewPos != None:
-      push = str_step(move.opOldPos, move.opNewPos)
-    return str_step(move.oldPos, move.newPos), push
+      push = part_str(move.opOldPos, move.opNewPos)
+    return part_str(move.oldPos, move.newPos), push
 
 def parse_initial(strs: list[str]):
   """

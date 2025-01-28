@@ -1,4 +1,4 @@
-from board import Board, COLORS, Move, Piece, RANKS, piece_to_char, StateException
+from board import Board, COLORS, Step, Piece, RANKS, piece_to_char, StateException
 
 class PlayerBase:
   """
@@ -18,9 +18,9 @@ class PlayerBase:
       self.name += "()"
     self.board = Board()
 
-  def choose_move(self) -> Move | None:
+  def choose_step(self) -> Step | None:
     """
-    Choose the move to player from the current board
+    Choose the step to play from the current board
     Must be implemented in subclass
     Return None to finish turn early
     """
@@ -63,15 +63,15 @@ class Game:
     # Continue taking steps until they run out, the other player's turn starts, or the game ends
     while self.board.state.left > 0 and self.board.state.player == player.color and not self.board.state.end:
       player.board.decode(self.board.encode())
-      move = player.choose_move()
+      step = player.choose_step()
       try:
-        if move == None:
+        if step == None:
           self.board.finish_turn()
           return
-        self.board.do_move(move)
+        self.board.do_step(step)
       except StateException as e:
         print("Invalid move from", player, e, ":")
-        print(self.board.move_str(move), piece_to_char(self.board[move.oldPos]), "->", piece_to_char(self.board[move.newPos])) # type: ignore
+        print(self.board.step_str(step), piece_to_char(self.board[step.oldPos]), "->", piece_to_char(self.board[step.newPos])) # type: ignore
 
   def play(self, printBoards: bool):
     """

@@ -1,4 +1,4 @@
-from board import Move, Piece, RankChars
+from board import Step, Piece, RankChars
 from game import PlayerBase
 
 class HumanPlayer(PlayerBase):
@@ -7,7 +7,7 @@ class HumanPlayer(PlayerBase):
   """
   argcount = 0
   name = "HumanPlayer"
-  def choose_move(self) -> Move | None:
+  def choose_step(self) -> Step | None:
     self.board.print()
     # Keep asking for moves until a valid one is given
     while True:
@@ -20,7 +20,7 @@ class HumanPlayer(PlayerBase):
       if len(res) == 2:
         push = res[1]
       try:
-        move = self.board.parse_move(res[0], push)
+        move = self.board.parse_step(res[0], push)
         return move
       except:
         print("Invalid move, please try again.")

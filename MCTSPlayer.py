@@ -1,4 +1,4 @@
-from board import Move, Piece, RankChars
+from board import Step, Piece, RankChars
 from game import PlayerBase
 from typing import TypeVar
 import time
@@ -11,11 +11,11 @@ class Node:
   boardState: str # The state of the board at this node
   children: list[Self] # type: ignore
   parent: Self | None # type: ignore
-  move: Move | None # The move that led to this node
+  move: Step | None # The move that led to this node
   N: int # The number of times this node has been visited
   Q: int # The total reward of this node and all it's children
 
-  def __init__(self, boardState: str, parent: Self | None, move: Move | None) -> None: # type: ignore
+  def __init__(self, boardState: str, parent: Self | None, move: Step | None) -> None: # type: ignore
     self.children = []
     self.N = 0
     self.Q = 0
@@ -47,7 +47,7 @@ class MCTSPlayer(PlayerBase):
     self.execTime = int(args[0])
     self.rollout = int(args[1])
 
-  def choose_move(self) -> Move | None:
+  def choose_step(self) -> Step | None:
     startTime = time.time() # Keep track of execution time to limit calculation
     boardState = self.board.encode() # Encode the current state, which is the root
     # If the stored next root is correct, use it, otherwise make a new root
@@ -77,8 +77,8 @@ class MCTSPlayer(PlayerBase):
     if len(node.children) > 0:
       return
     self.board.decode(node.boardState)
-    for move in self.board.possible_moves():
-      self.board.do_move(move)
+    for move in self.board.possible_steps():
+      self.board.do_step(move)
       node.children.append(Node(self.board.encode(), node, move))
       self.board.decode(node.boardState)
 
@@ -109,12 +109,12 @@ class MCTSPlayer(PlayerBase):
         if self.board.state.left < 4 and random.random() < 0.05:
           self.board.finish_turn()
         else:
-          moves = list(self.board.possible_moves())
+          moves = list(self.board.possible_steps())
           if len(moves) == 0:
             # If we have no possible moves, finish our turn
             self.board.finish_turn()
           else:
-            self.board.do_move(random.choice(moves))
+            self.board.do_step(random.choice(moves))
 
       if self.board.state.player == self.color:
         # If we win, the reward is 1
