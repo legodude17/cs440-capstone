@@ -49,7 +49,7 @@ for url in archive_urls:
 # This file is redudant
 os.remove("games/allgames2006.txt")
 
-# These two don't have the game data I needs
+# These two don't have the game data I need
 os.remove("games/ratedgames.txt")
 os.remove("games/eventgames.txt")
 

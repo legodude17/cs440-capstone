@@ -1,3 +1,4 @@
+from typing import Tuple
 from game import Game, PlayerBase
 from board import COLORS
 
@@ -9,7 +10,7 @@ class Tournament:
   players: list[PlayerBase] # The players
   wins: list[int] # The number of wins each player gets
 
-  def __init__(self, rounds, *players) -> None:
+  def __init__(self, rounds: int, *players: PlayerBase) -> None:
     self.rounds = rounds
     self.players = list(players)
     self.wins = []
@@ -24,7 +25,7 @@ class Tournament:
     for _ in range(self.rounds):
       for i in range(len(self.players)):
         for j in range(len(self.players)):
-          if i == j: # Players can't play against themself
+          if i == j: # Players can't play against themselves
             continue
           player1 = self.players[i]
           player2 = self.players[j]
