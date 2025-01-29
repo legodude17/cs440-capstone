@@ -9,9 +9,9 @@ class HumanPlayer(PlayerBase):
   name = "HumanPlayer"
   def choose_step(self) -> Step | None:
     self.board.print()
-    # Keep asking for moves until a valid one is given
+    # Keep asking for steps until a valid one is given
     while True:
-      print("Enter your move in standard notation:", end=" ")
+      print("Enter your next step in standard notation:", end=" ")
       res = input().split(" ")
       # The human can just press enter to finish their turn
       if len(res) == 0 or len(res[0]) == 0:
@@ -20,8 +20,8 @@ class HumanPlayer(PlayerBase):
       if len(res) == 2:
         push = res[1]
       try:
-        move = self.board.parse_step(res[0], push)
-        return move
+        step = self.board.parse_step(res[0], push)
+        return step
       except:
         print("Invalid move, please try again.")
         

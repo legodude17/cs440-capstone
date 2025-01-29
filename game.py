@@ -1,4 +1,4 @@
-from board import Board, COLORS, Step, Piece, RANKS, piece_to_char, StateException
+from board import Board, COLORS, Step, Move, Piece, RANKS, piece_to_char, StateException
 
 class PlayerBase:
   """
@@ -21,10 +21,33 @@ class PlayerBase:
   def choose_step(self) -> Step | None:
     """
     Choose the step to play from the current board
-    Must be implemented in subclass
+    Must either implement this or choose_move
     Return None to finish turn early
     """
     raise NotImplementedError()
+  
+  def choose_move(self, boardState: str) -> Move:
+    """
+    Choose the move to play from the given board
+    Default implementation will write the board to the class's board, then call choose_step until either four steps are provided or None is returned
+    """
+    self.board.decode(boardState)
+    step1 = self.choose_step()
+    if step1 == None:
+      raise StateException("Cannot completely pass the turn!")
+    self.board.decode(boardState)
+    step2 = self.choose_step()
+    if step2 == None:
+      return step1,
+    self.board.decode(boardState)
+    step3 = self.choose_step()
+    if step3 == None:
+      return step1,step2
+    self.board.decode(boardState)
+    step4 = self.choose_step()
+    if step4 == None:
+      return step1,step2,step3
+    return step1,step2,step3,step4
   
   def get_initial(self) -> list[list[int]]:
     return [
@@ -62,16 +85,15 @@ class Game:
     player = self.players[self.board.state.player]
     # Continue taking steps until they run out, the other player's turn starts, or the game ends
     while self.board.state.left > 0 and self.board.state.player == player.color and not self.board.state.end:
-      player.board.decode(self.board.encode())
-      step = player.choose_step()
+      move = player.choose_move(self.board.encode())
       try:
-        if step == None:
-          self.board.finish_turn()
-          return
-        self.board.do_step(step)
+        self.board.do_move(move)
       except StateException as e:
         print("Invalid move from", player, e, ":")
-        print(self.board.step_str(step), piece_to_char(self.board[step.oldPos]), "->", piece_to_char(self.board[step.newPos])) # type: ignore
+        i = 1
+        for step in move:
+          print(str(i) + ".", self.board.step_str(step), piece_to_char(self.board[step.oldPos]), "->", piece_to_char(self.board[step.newPos])) # type: ignore
+          i += 1
 
   def play(self, printBoards: bool):
     """

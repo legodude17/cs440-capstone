@@ -11,7 +11,7 @@ class Node:
   boardState: str # The state of the board at this node
   children: list[Self] # type: ignore
   parent: Self | None # type: ignore
-  move: Step | None # The move that led to this node
+  step: Step | None # The step that led to this node
   N: int # The number of times this node has been visited
   Q: int # The total reward of this node and all it's children
 
@@ -21,7 +21,7 @@ class Node:
     self.Q = 0
     self.boardState = boardState
     self.parent = parent
-    self.move = move
+    self.step = move
 
 class MCTSPlayer(PlayerBase):
   """
@@ -68,7 +68,7 @@ class MCTSPlayer(PlayerBase):
     # Find the best move by examining the root's children
     bestNode = max(root.children, key=self.score)
     self._nextRoot = bestNode
-    return bestNode.move
+    return bestNode.step
   
   def expand(self, node: Node):
     """

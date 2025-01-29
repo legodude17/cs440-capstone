@@ -279,6 +279,8 @@ class Board:
     """
     Execute a single step and modify the state as needed
     """
+    if self.state.left == 0:
+      raise StateException("Current player has no steps left.")
     toMove = self[step.oldPos]
     if toMove == None:
       raise StateException("No piece at starting location.")
@@ -317,8 +319,13 @@ class Board:
     self._check_traps()
 
     self.state.left -= 1
-    if self.state.left == 0:
-      self.finish_turn()
+
+  def do_move(self, move: Move):
+    if self.state.left < len(move):
+      raise StateException("Cannot make a move with more steps than are left.")
+    for step in move:
+      self.do_step(step)
+    self.finish_turn()
 
   def finish_turn(self):
     """
@@ -431,7 +438,7 @@ class Board:
         helped = True
     return frozen and not helped
   
-  def possible_steps(self):
+  def possible_steps(self) -> Generator[Step, Any, None]:
     """
     Obtain all possible steps for the current player
     """
@@ -469,6 +476,19 @@ class Board:
               if self[pos3] == None:
                 # Step into an adjacent tile, them pull the enemy to my old tile
                 yield Step.create_push(pos, pos3, pos2, pos)
+
+  def possible_moves(self) -> Generator[Move, Any, None]:
+    def expand(depth, existing: list[Step]) -> Generator[Move, Any, None]:
+      if self.state.left < depth:
+        return
+      savedState = self.encode()
+      for step in self.possible_steps():
+        yield tuple(existing + [step]) #type: ignore
+        self.do_step(step)
+        yield from expand(depth + 1, existing + [step])
+        self.decode(savedState)
+
+    yield from expand(1, [])
 
   def print(self):
     """
