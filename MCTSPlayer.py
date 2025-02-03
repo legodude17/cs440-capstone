@@ -72,14 +72,16 @@ class MCTSPlayer(PlayerBase):
   
   def expand(self, node: Node):
     """
-    Expand a node by adding children for each of the possible moves at that states
+    Expand a node by adding children for each of the possible steps at that states
     """
     if len(node.children) > 0:
       return
     self.board.decode(node.boardState)
-    for move in self.board.possible_steps():
-      self.board.do_step(move)
-      node.children.append(Node(self.board.encode(), node, move))
+    for step in self.board.possible_steps():
+      self.board.do_step(step)
+      if self.board.state.left == 0:
+        self.board.finish_turn()
+      node.children.append(Node(self.board.encode(), node, step))
       self.board.decode(node.boardState)
 
   def select(self, node: Node):
@@ -105,16 +107,8 @@ class MCTSPlayer(PlayerBase):
     for _ in range(self.rollout):
       self.board.decode(node.boardState)
       while not self.board.state.end:
-        # 5% of the time, end the turn early
-        if self.board.state.left < 4 and random.random() < 0.05:
-          self.board.finish_turn()
-        else:
-          moves = list(self.board.possible_steps())
-          if len(moves) == 0:
-            # If we have no possible moves, finish our turn
-            self.board.finish_turn()
-          else:
-            self.board.do_step(random.choice(moves))
+        moves = list(self.board.possible_moves())
+        self.board.do_move(random.choice(moves))
 
       if self.board.state.player == self.color:
         # If we win, the reward is 1

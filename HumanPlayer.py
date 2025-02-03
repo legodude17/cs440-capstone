@@ -23,7 +23,7 @@ class HumanPlayer(PlayerBase):
         step = self.board.parse_step(res[0], push)
         return step
       except:
-        print("Invalid move, please try again.")
+        print("Invalid step, please try again.")
         
   def get_initial(self) -> list[list[Piece]]:
     print("Choose starting setup:")

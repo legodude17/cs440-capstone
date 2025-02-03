@@ -36,14 +36,19 @@ class PlayerBase:
     if step1 == None:
       raise StateException("Cannot completely pass the turn!")
     self.board.decode(boardState)
+    self.board.do_step(step1)
+    boardState = self.board.encode()
     step2 = self.choose_step()
     if step2 == None:
       return step1,
     self.board.decode(boardState)
+    self.board.do_step(step2)
+    boardState = self.board.encode()
     step3 = self.choose_step()
     if step3 == None:
       return step1,step2
     self.board.decode(boardState)
+    self.board.do_step(step3)
     step4 = self.choose_step()
     if step4 == None:
       return step1,step2,step3
@@ -89,7 +94,7 @@ class Game:
       try:
         self.board.do_move(move)
       except StateException as e:
-        print("Invalid move from", player, e, ":")
+        print("Invalid move from", player.name, e, ":")
         i = 1
         for step in move:
           print(str(i) + ".", self.board.step_str(step), piece_to_char(self.board[step.oldPos]), "->", piece_to_char(self.board[step.newPos])) # type: ignore
