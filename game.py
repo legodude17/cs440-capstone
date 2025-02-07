@@ -88,17 +88,15 @@ class Game:
     Do one turn, which involves a player taking 1-4 steps
     """
     player = self.players[self.board.state.player]
-    # Continue taking steps until they run out, the other player's turn starts, or the game ends
-    while self.board.state.left > 0 and self.board.state.player == player.color and not self.board.state.end:
-      move = player.choose_move(self.board.encode())
-      try:
-        self.board.do_move(move)
-      except StateException as e:
-        print("Invalid move from", player.name, e, ":")
-        i = 1
-        for step in move:
-          print(str(i) + ".", self.board.step_str(step), piece_to_char(self.board[step.oldPos]), "->", piece_to_char(self.board[step.newPos])) # type: ignore
-          i += 1
+    move = player.choose_move(self.board.encode())
+    try:
+      self.board.do_move(move)
+    except StateException as e:
+      print("Invalid move from", player.name, e, ":")
+      i = 1
+      for step in move:
+        print(str(i) + ".", self.board.step_str(step), piece_to_char(self.board[step.oldPos]), "->", piece_to_char(self.board[step.newPos])) # type: ignore
+        i += 1
 
   def play(self, printBoards: bool):
     """

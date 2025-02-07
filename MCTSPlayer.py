@@ -1,4 +1,4 @@
-from board import Step, Piece, RankChars
+from board import Move, StateException, Step, Piece, RankChars
 from game import PlayerBase
 from typing import TypeVar
 import time
@@ -11,17 +11,17 @@ class Node:
   boardState: str # The state of the board at this node
   children: list[Self] # type: ignore
   parent: Self | None # type: ignore
-  step: Step | None # The step that led to this node
+  move: Move | None # The move that led to this node
   N: int # The number of times this node has been visited
   Q: int # The total reward of this node and all it's children
 
-  def __init__(self, boardState: str, parent: Self | None, move: Step | None) -> None: # type: ignore
+  def __init__(self, boardState: str, parent: Self | None, move: Move | None) -> None: # type: ignore
     self.children = []
     self.N = 0
     self.Q = 0
     self.boardState = boardState
     self.parent = parent
-    self.step = move
+    self.move = move
 
 class MCTSPlayer(PlayerBase):
   """
@@ -37,8 +37,6 @@ class MCTSPlayer(PlayerBase):
   # However, increasing the second increases the time each leaf takes to process,
   # so increasing it without the first may reduce skill instead.
  
-  # The next root node to use, used to increase efficiency for steps before the last
-  _nextRoot: Node | None
   name = "MCTSPlayer"
   
   def __init__(self, *args) -> None:
@@ -47,15 +45,9 @@ class MCTSPlayer(PlayerBase):
     self.execTime = int(args[0])
     self.rollout = int(args[1])
 
-  def choose_step(self) -> Step | None:
+  def choose_move(self, boardState: str) -> Move:
     startTime = time.time() # Keep track of execution time to limit calculation
-    boardState = self.board.encode() # Encode the current state, which is the root
-    # If the stored next root is correct, use it, otherwise make a new root
-    if self._nextRoot != None and self._nextRoot.boardState == boardState:
-      root = self._nextRoot
-    else:
-      root = Node(boardState, None, None)
-    self.expand(root)
+    root = Node(boardState, None, None)
     while time.time() - startTime < self.execTime:
       # 1 iteration of MCTS:
       #   Select -> Expand -> Simulate -> Backpropagate
@@ -67,22 +59,21 @@ class MCTSPlayer(PlayerBase):
 
     # Find the best move by examining the root's children
     bestNode = max(root.children, key=self.score)
-    self._nextRoot = bestNode
-    return bestNode.step
+    if bestNode.move == None:
+      raise StateException("Best move is to pass, which is impossible")
+    else:
+      self.board.decode(bestNode.boardState)
+      return bestNode.move
   
   def expand(self, node: Node):
     """
-    Expand a node by adding children for each of the possible steps at that states
+    Expand a node by adding children for each of the possible moves at that states
     """
     if len(node.children) > 0:
       return
     self.board.decode(node.boardState)
-    for step in self.board.possible_steps():
-      self.board.do_step(step)
-      if self.board.state.left == 0:
-        self.board.finish_turn()
-      node.children.append(Node(self.board.encode(), node, step))
-      self.board.decode(node.boardState)
+    for move in self.board.possible_moves():
+      node.children.append(Node(self.board.encode(), node, move))
 
   def select(self, node: Node):
     """

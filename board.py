@@ -286,7 +286,7 @@ class Board:
       raise StateException("No piece at starting location.")
     color, rank = parse_piece(toMove)
     if color != self.state.player:
-      raise StateException("Cannot move opponents pieces.")
+      raise StateException("Cannot move opponent's pieces.")
     if self.is_frozen(step.oldPos):
       raise StateException("Cannot move a frozen piece.")
 
@@ -305,7 +305,7 @@ class Board:
     if self[step.newPos] != None and step.newPos != step.opOldPos:
       raise StateException("Cannot move on top of another piece.")
     
-    # You can move an enemy on top of piece if you're pulling it
+    # You can move an enemy on top of your piece if you're pulling it
     if step.opNewPos != None and self[step.opNewPos] != None and step.oldPos != step.opNewPos:
       raise StateException("Cannot push a piece on top of another piece.")
     
@@ -478,13 +478,22 @@ class Board:
                 yield Step.create_push(pos, pos3, pos2, pos)
 
   def possible_moves(self) -> Generator[Move, Any, None]:
+    """
+    Obtain all possible moves for the current player.
+    Caveat: This method mutates the board while iterating.
+      When a move is yielded, the board state is set to how
+        it would look like if that move was played.
+      To avoid this, gather the elements into a list.
+      The method will restore the original state of the
+        board upon the generator being exhausted.
+    """
     def expand(depth, existing: list[Step]) -> Generator[Move, Any, None]:
       if self.state.left < depth:
         return
       savedState = self.encode()
       for step in self.possible_steps():
-        yield tuple(existing + [step]) #type: ignore
         self.do_step(step)
+        yield tuple(existing + [step]) #type: ignore
         yield from expand(depth + 1, existing + [step])
         self.decode(savedState)
 
@@ -575,14 +584,14 @@ class Board:
     opNewPos = None
     if push != None:
       opOldPos, opNewPos = parse_part(push)
-    move = Step()
-    move.oldPos = oldPos
-    move.newPos = newPos
-    move.opOldPos = opOldPos
-    move.opNewPos = opNewPos
-    return move
+    step = Step()
+    step.oldPos = oldPos
+    step.newPos = newPos
+    step.opOldPos = opOldPos
+    step.opNewPos = opNewPos
+    return step
   
-  def step_str(self, move: Step) -> tuple[str, str | None]:
+  def step_str(self, step: Step) -> tuple[str, str | None]:
     """
     Turn a step into a string, and maybe a push string as well
     """
@@ -606,9 +615,26 @@ class Board:
         raise ValueError("Invalid move direction")
       return char + pos + dir
     push = None
-    if move.opOldPos != None and move.opNewPos != None:
-      push = part_str(move.opOldPos, move.opNewPos)
-    return part_str(move.oldPos, move.newPos), push
+    if step.opOldPos != None and step.opNewPos != None:
+      push = part_str(step.opOldPos, step.opNewPos)
+    return part_str(step.oldPos, step.newPos), push
+  
+  def move_str(self, move: Move) -> str:
+    def tuple_str(arg: tuple[str, str | None]):
+      if arg[1] == None:
+        return arg[0]
+      else:
+        return arg[0] + "," + arg[1]
+    return " ".join([tuple_str(self.step_str(step)) for step in move])
+  
+  def parse_move(self, val: str) -> Move:
+    strs = val.split(" ")
+    steps = []
+    for stepStr in strs:
+      args = stepStr.split(",")
+      steps.append(self.parse_step(args[0], args[1]))
+    
+    return tuple(steps)
 
 def parse_initial(strs: list[str]):
   """
