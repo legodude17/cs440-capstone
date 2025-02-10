@@ -487,17 +487,17 @@ class Board:
       The method will restore the original state of the
         board upon the generator being exhausted.
     """
-    def expand(depth, existing: list[Step]) -> Generator[Move, Any, None]:
-      if self.state.left < depth:
+    def expand(existing: list[Step]) -> Generator[Move, Any, None]:
+      if self.state.left == 0:
         return
       savedState = self.encode()
       for step in self.possible_steps():
         self.do_step(step)
         yield tuple(existing + [step]) #type: ignore
-        yield from expand(depth + 1, existing + [step])
+        yield from expand(existing + [step])
         self.decode(savedState)
 
-    yield from expand(1, [])
+    yield from expand([])
 
   def print(self):
     """

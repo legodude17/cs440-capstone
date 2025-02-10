@@ -47,6 +47,7 @@ class MCTSPlayer(PlayerBase):
   # so increasing it without the first may reduce skill instead.
  
   name = "MCTSPlayer"
+  argnames = ["execTime", "rollout"]
   statsType = MCTSStats
   stats: MCTSStats
   
@@ -74,7 +75,6 @@ class MCTSPlayer(PlayerBase):
     if bestNode.move == None:
       raise StateException("Best move is to pass, which is impossible")
     else:
-      self.board.decode(bestNode.boardState)
       return bestNode.move
   
   def expand(self, node: Node):
