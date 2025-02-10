@@ -46,6 +46,8 @@ if __name__ == "__main__":
   # When ran directly, runs a tournament for the given number of rounds using all the given players
   import sys
   import importlib
+  import os
+  import json
   rounds = int(sys.argv[1])
   args = sys.argv[2:]
   players = []
@@ -62,3 +64,11 @@ if __name__ == "__main__":
     players.append(PlayerClass(*playerArgs))
 
   Tournament(rounds, *players)()
+  if not os.access("stats", os.R_OK):
+    os.mkdir("stats")
+  i = 1
+  while os.access("stats/game" + str(i) + ".json", os.W_OK):
+    i += 1
+  with open("stats/game" + str(i) + ".json", "w") as file:
+    json.dump([player.get_stats() for player in players], file)
+  print("Wrote stats to", "stats/game" + str(i) + ".json")

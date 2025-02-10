@@ -172,6 +172,13 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Game data
 allgames.txt
-best_initial.txt
 games
+
+# Generated files
+best_initial.txt
+
+# Gathered data
+stats

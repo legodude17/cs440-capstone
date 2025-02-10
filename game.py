@@ -1,4 +1,16 @@
-from board import Board, COLORS, Step, Move, Piece, RANKS, piece_to_char, StateException
+import time
+from board import Board, COLORS, Step, Move, RANKS, StateException
+
+class StatsBase:
+  """
+  Holds stats of the bots
+  """
+  wins: int = 0 # The number of times the bot won a game
+  losses: int = 0 # The number of times the bot lost a game
+  games: int = 0 # The number of games the bot has played
+  time: float = 0 # Total amount of time spent calculating
+  turns: int = 0 # Total amount of turns the bot took
+  steps: int = 0 # Total amount of steps the bot played
 
 class PlayerBase:
   """
@@ -7,16 +19,22 @@ class PlayerBase:
   argcount: int # The number of arguments this player needs
   board: Board # The board the player is playing on
   color: int # The color of the player, gold or silver
+  stats: StatsBase # The stats of this player
+  statsType: type[StatsBase] = StatsBase
   name: str = "PlayerBase" # The name of the player
+  args: list
+  argnames: list[str]
 
   def __init__(self, *args) -> None:
     # Default name is ClassName(args)
     self.name = self.__class__.name
+    self.args = list(args)
     if len(args) > 0:
       self.name += "(" + ", ".join(args) + ")"
     else:
       self.name += "()"
     self.board = Board()
+    self.stats = self.__class__.statsType()
 
   def choose_step(self) -> Step | None:
     """
@@ -61,6 +79,13 @@ class PlayerBase:
       [RANKS.HORSE, RANKS.CAT, RANKS.DOG, RANKS.CAMEL,
         RANKS.ELEPHANT, RANKS.DOG, RANKS.CAT, RANKS.HORSE]
     ]
+  
+  def get_stats(self) -> dict:
+    stats = dict(name=self.name, type=self.__class__.name)
+    for i in range(self.__class__.argcount):
+      stats[self.__class__.argnames[i]] = self.args[i]
+    stats.update(self.stats.__dict__)
+    return stats
 
 class Game:
   """
@@ -88,15 +113,15 @@ class Game:
     Do one turn, which involves a player taking 1-4 steps
     """
     player = self.players[self.board.state.player]
+    player.stats.turns += 1
+    start = time.time()
     move = player.choose_move(self.board.encode())
+    player.stats.time += time.time() - start
+    player.stats.steps += len(move)
     try:
       self.board.do_move(move)
     except StateException as e:
-      print("Invalid move from", player.name, e, ":")
-      i = 1
-      for step in move:
-        print(str(i) + ".", self.board.step_str(step), piece_to_char(self.board[step.oldPos]), "->", piece_to_char(self.board[step.newPos])) # type: ignore
-        i += 1
+      print("Invalid move from", player.name, e, ":", self.board.move_str(move))
 
   def play(self, printBoards: bool):
     """
@@ -109,12 +134,20 @@ class Game:
       self.turn()
       if printBoards:
         self.board.print()
+    for player in self.players:
+      player.stats.games += 1
+    winner = self.players[self.board.state.player]
+    loser = self.players[1 - self.board.state.player]
+    winner.stats.wins += 1
+    loser.stats.losses += 1
     return self.board.state.player
 
 if __name__ == "__main__":
   # When run directly, do a game between the given two players
   import sys
   import importlib
+  import os
+  import json
   if len(sys.argv) < 3:
     print("Error: Need to specific the two player classes")
     exit(1)
@@ -129,3 +162,12 @@ if __name__ == "__main__":
   player2 = Player2Class(*args[n1+2:n1+2+n2+1])
   game = Game(player1, player2)
   game.play(True)
+  if not os.access("stats", os.R_OK):
+    os.mkdir("stats")
+  i = 1
+  while os.access("stats/game" + str(i) + ".json", os.W_OK):
+    i += 1
+  with open("stats/game" + str(i) + ".json", "w") as file:
+    json.dump([player.get_stats() for player in game.players], file)
+  print("Wrote game stats to", "stats/game" + str(i) + ".json")
+

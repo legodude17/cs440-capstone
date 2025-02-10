@@ -1,5 +1,5 @@
 from board import Move, StateException, Step, Piece, RankChars
-from game import PlayerBase
+from game import PlayerBase, StatsBase
 from typing import TypeVar
 import time
 import math
@@ -23,6 +23,15 @@ class Node:
     self.parent = parent
     self.move = move
 
+class MCTSStats(StatsBase):
+  """
+  Stats for the Monte-Carlo Tree Search
+  """
+  iterations: int = 0 # Total number of iterations conducted
+  explored: int = 0 # Total number of nodes explored (considered for selection)
+  created: int = 0 # Total number of nodes created
+  rollouts: int = 0 # Total number of rollouts conducted
+
 class MCTSPlayer(PlayerBase):
   """
   Monte-Carlo Tree Search Player
@@ -38,6 +47,8 @@ class MCTSPlayer(PlayerBase):
   # so increasing it without the first may reduce skill instead.
  
   name = "MCTSPlayer"
+  statsType = MCTSStats
+  stats: MCTSStats
   
   def __init__(self, *args) -> None:
     super().__init__(*args)
@@ -51,6 +62,7 @@ class MCTSPlayer(PlayerBase):
     while time.time() - startTime < self.execTime:
       # 1 iteration of MCTS:
       #   Select -> Expand -> Simulate -> Backpropagate
+      self.stats.iterations += 1
       path = self.select(root)
       leaf = path[-1]
       self.expand(leaf)
@@ -73,6 +85,7 @@ class MCTSPlayer(PlayerBase):
       return
     self.board.decode(node.boardState)
     for move in self.board.possible_moves():
+      self.stats.created += 1
       node.children.append(Node(self.board.encode(), node, move))
 
   def select(self, node: Node):
@@ -81,11 +94,13 @@ class MCTSPlayer(PlayerBase):
     """
     path = []
     while True:
+      self.stats.explored += 1
       path.append(node)
       if len(node.children) == 0:
         return path
       for child in node.children:
         if len(child.children) == 0:
+          self.stats.explored += 1
           path.append(child)
           return path
       node = max(node.children, key=self.uct)
@@ -96,6 +111,7 @@ class MCTSPlayer(PlayerBase):
     """
     reward = 0
     for _ in range(self.rollout):
+      self.stats.rollouts += 1
       self.board.decode(node.boardState)
       while not self.board.state.end:
         moves = list(self.board.possible_moves())
