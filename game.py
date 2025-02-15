@@ -49,28 +49,16 @@ class PlayerBase:
     Choose the move to play from the given board
     Default implementation will write the board to the class's board, then call choose_step until either four steps are provided or None is returned
     """
-    self.board.decode(boardState)
-    step1 = self.choose_step()
-    if step1 == None:
-      raise StateException("Cannot completely pass the turn!")
-    self.board.decode(boardState)
-    self.board.do_step(step1)
-    boardState = self.board.encode()
-    step2 = self.choose_step()
-    if step2 == None:
-      return step1,
-    self.board.decode(boardState)
-    self.board.do_step(step2)
-    boardState = self.board.encode()
-    step3 = self.choose_step()
-    if step3 == None:
-      return step1,step2
-    self.board.decode(boardState)
-    self.board.do_step(step3)
-    step4 = self.choose_step()
-    if step4 == None:
-      return step1,step2,step3
-    return step1,step2,step3,step4
+    move = []
+    for _ in range(4):
+      self.board.decode(boardState)
+      step = self.choose_step()
+      if step == None:
+        break
+      move.append(step)
+      self.board.do_step(step)
+      boardState = self.board.encode()
+    return tuple(move)
   
   def get_initial(self) -> list[list[int]]:
     return [

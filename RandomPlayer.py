@@ -10,5 +10,4 @@ class RandomPlayer(PlayerBase):
   name = "RandomPlayer"
   def choose_move(self, boardState: str) -> Move:
     self.board.decode(boardState)
-    moves = list(self.board.possible_moves())
-    return random.choice(moves)
+    return self.board.random_move()

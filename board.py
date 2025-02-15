@@ -1,3 +1,4 @@
+import random
 from typing import Any, Generator, NewType, TypeVar
 
 Piece = NewType('Piece', int)
@@ -498,6 +499,38 @@ class Board:
         self.decode(savedState)
 
     yield from expand([])
+
+  def random_step(self) -> Step | None:
+    """
+    Get a random step from the current position.
+      Includes a sanity check for an empty return value.
+    """
+    steps = list(self.possible_steps())
+    if len(steps) == 0:
+      return None
+    return random.choice(steps)
+
+  def random_move(self) -> Move:
+    """
+    Return a random valid move from the current position.
+      This is much more efficient than doing
+        `random.choice(list(board.possible_moves()))`
+        because it doesn't need to gather a list of all possible moves,
+        which can be upwards of 300k moves long.
+    """
+    if self.state.left == 0:
+      raise StateException("Current player is out of steps, no possible moves")
+    steps = random.randint(1, self.state.left)
+    move = []
+    savedState = self.encode()
+    for _ in range(steps):
+      step = self.random_step()
+      if step == None:
+        break
+      move.append(step)
+      self.do_step(step)
+    self.decode(savedState)
+    return tuple(move)
 
   def print(self):
     """

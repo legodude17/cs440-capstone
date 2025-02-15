@@ -32,9 +32,10 @@ class MCTSStats(StatsBase):
   created: int = 0 # Total number of nodes created
   rollouts: int = 0 # Total number of rollouts conducted
 
-class MCTSPlayer(PlayerBase):
+class MCTSMovePlayer(PlayerBase):
   """
-  Monte-Carlo Tree Search Player
+  Monte-Carlo Tree Search Player with move strategy:
+    Each move gets a node, return the best move by finding the best child of the root
   """
   # Takes 2 arguments:
   argcount = 2
@@ -114,8 +115,7 @@ class MCTSPlayer(PlayerBase):
       self.stats.rollouts += 1
       self.board.decode(node.boardState)
       while not self.board.state.end:
-        moves = list(self.board.possible_moves())
-        self.board.do_move(random.choice(moves))
+        self.board.do_move(self.board.random_move())
 
       if self.board.state.player == self.color:
         # If we win, the reward is 1
