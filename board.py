@@ -483,7 +483,7 @@ class Board:
     Obtain all possible moves for the current player.
     Caveat: This method mutates the board while iterating.
       When a move is yielded, the board state is set to how
-        it would look like if that move was played.
+        it would look like if that series of steps was played.
       To avoid this, gather the elements into a list.
       The method will restore the original state of the
         board upon the generator being exhausted.

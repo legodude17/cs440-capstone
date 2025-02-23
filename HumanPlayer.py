@@ -1,5 +1,5 @@
 from board import Step, Piece, RankChars
-from game import PlayerBase
+from game import PlayerBase, StatsBase
 
 class HumanPlayer(PlayerBase):
   """
@@ -7,6 +7,7 @@ class HumanPlayer(PlayerBase):
   """
   argcount = 0
   name = "HumanPlayer"
+  
   def choose_step(self) -> Step | None:
     self.board.print()
     # Keep asking for steps until a valid one is given

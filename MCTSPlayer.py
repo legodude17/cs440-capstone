@@ -1,9 +1,8 @@
-from board import Move, StateException, Step, Piece, RankChars
+from board import Move, Step, Piece, RankChars
 from game import PlayerBase, StatsBase
 from typing import TypeVar
 import time
 import math
-import random
 
 Self = TypeVar("Self", bound="Node")
 
@@ -11,17 +10,17 @@ class Node:
   boardState: str # The state of the board at this node
   children: list[Self] # type: ignore
   parent: Self | None # type: ignore
-  move: Move | None # The move that led to this node
+  step: Step | None # The step that led to this node
   N: int # The number of times this node has been visited
   Q: int # The total reward of this node and all it's children
 
-  def __init__(self, boardState: str, parent: Self | None, move: Move | None) -> None: # type: ignore
+  def __init__(self, boardState: str, parent: Self | None, step: Step | None) -> None: # type: ignore
     self.children = []
     self.N = 0
     self.Q = 0
     self.boardState = boardState
     self.parent = parent
-    self.move = move
+    self.step = step
 
 class MCTSStats(StatsBase):
   """
@@ -32,10 +31,15 @@ class MCTSStats(StatsBase):
   created: int = 0 # Total number of nodes created
   rollouts: int = 0 # Total number of rollouts conducted
 
-class MCTSMovePlayer(PlayerBase):
+  def print(self):
+    super().print()
+    print(f"\t{self.iterations} iterations conducted ({self.iterations / self.turns} per turn)")
+    print(f"\t{self.rollouts} rollouts conducted ({self.rollouts / self.turns} per turn)")
+
+
+class MCTSPlayer(PlayerBase):
   """
-  Monte-Carlo Tree Search Player with move strategy:
-    Each move gets a node, return the best move by finding the best child of the root
+  Monte-Carlo Tree Search Player
   """
   # Takes 2 arguments:
   argcount = 2
@@ -49,8 +53,8 @@ class MCTSMovePlayer(PlayerBase):
  
   name = "MCTSPlayer"
   argnames = ["execTime", "rollout"]
-  statsType = MCTSStats
   stats: MCTSStats
+  statsType = MCTSStats
   
   def __init__(self, *args) -> None:
     super().__init__(*args)
@@ -61,6 +65,7 @@ class MCTSMovePlayer(PlayerBase):
   def choose_move(self, boardState: str) -> Move:
     startTime = time.time() # Keep track of execution time to limit calculation
     root = Node(boardState, None, None)
+    self.expand(root)
     while time.time() - startTime < self.execTime:
       # 1 iteration of MCTS:
       #   Select -> Expand -> Simulate -> Backpropagate
@@ -71,23 +76,39 @@ class MCTSMovePlayer(PlayerBase):
       reward = self.simulate(leaf)
       self.backup(path, reward)
 
-    # Find the best move by examining the root's children
+    # Find the best step by examining the current nodes's children
+    # Do that until we find a node that ends our turn, or we reach four steps
     bestNode = max(root.children, key=self.score)
-    if bestNode.move == None:
-      raise StateException("Best move is to pass, which is impossible")
-    else:
-      return bestNode.move
+    move = []
+    for _ in range(4):
+      step = bestNode.step
+      if step == None:
+        break
+      move.append(step)
+      bestNode = max(bestNode.children, key=self.score)
+    return tuple(move)
   
   def expand(self, node: Node):
     """
-    Expand a node by adding children for each of the possible moves at that states
+    Expand a node by adding children for each of the possible steps at that states
     """
     if len(node.children) > 0:
       return
     self.board.decode(node.boardState)
-    for move in self.board.possible_moves():
+    # If this is not the first step of the turn,
+    # add the option to end the turn and not take any more steps
+    if self.board.state.left != 4:
+      self.board.finish_turn()
       self.stats.created += 1
-      node.children.append(Node(self.board.encode(), node, move))
+      node.children.append(Node(self.board.encode(), node, None))
+      self.board.decode(node.boardState)
+    for step in self.board.possible_steps():
+      self.board.do_step(step)
+      if self.board.state.left == 0:
+        self.board.finish_turn()
+      self.stats.created += 1
+      node.children.append(Node(self.board.encode(), node, step))
+      self.board.decode(node.boardState)
 
   def select(self, node: Node):
     """
@@ -95,8 +116,8 @@ class MCTSMovePlayer(PlayerBase):
     """
     path = []
     while True:
-      self.stats.explored += 1
       path.append(node)
+      self.stats.explored += 1
       if len(node.children) == 0:
         return path
       for child in node.children:

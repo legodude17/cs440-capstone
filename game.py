@@ -5,12 +5,22 @@ class StatsBase:
   """
   Holds stats of the bots
   """
+  name: str # The name of the bot with these stats
   wins: int = 0 # The number of times the bot won a game
   losses: int = 0 # The number of times the bot lost a game
   games: int = 0 # The number of games the bot has played
   time: float = 0 # Total amount of time spent calculating
   turns: int = 0 # Total amount of turns the bot took
   steps: int = 0 # Total amount of steps the bot played
+
+  def __init__(self, name: str):
+    self.name = name
+
+  def print(self):
+    print(self.name + ":")
+    print(f"\tGames Played: {self.games} ({self.wins} Wins, {self.losses} Losses)")
+    print(f"\tTurns taken: {self.turns} ({self.turns / self.games} per game)")
+    print(f"\tAverage of {self.time / self.turns}ms and {self.steps / self.turns} steps per turn")
 
 class PlayerBase:
   """
@@ -34,7 +44,7 @@ class PlayerBase:
     else:
       self.name += "()"
     self.board = Board()
-    self.stats = self.__class__.statsType()
+    self.stats = self.__class__.statsType(self.name)
 
   def choose_step(self) -> Step | None:
     """
@@ -50,11 +60,12 @@ class PlayerBase:
     Default implementation will write the board to the class's board, then call choose_step until either four steps are provided or None is returned
     """
     move = []
+    self.board.decode(boardState)
     for _ in range(4):
-      self.board.decode(boardState)
       step = self.choose_step()
       if step == None:
         break
+      self.board.decode(boardState)
       move.append(step)
       self.board.do_step(step)
       boardState = self.board.encode()

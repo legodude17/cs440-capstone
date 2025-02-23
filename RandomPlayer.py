@@ -1,5 +1,5 @@
 from board import Move
-from game import PlayerBase
+from game import PlayerBase, StatsBase
 import random
 
 class RandomPlayer(PlayerBase):
@@ -8,6 +8,7 @@ class RandomPlayer(PlayerBase):
   """
   argcount = 0
   name = "RandomPlayer"
+
   def choose_move(self, boardState: str) -> Move:
     self.board.decode(boardState)
     return self.board.random_move()
