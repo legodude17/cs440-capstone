@@ -1,3 +1,4 @@
+from tracemalloc import start
 from board import Move, Step, Piece, RankChars
 from game import PlayerBase, StatsBase
 from typing import TypeVar
@@ -37,9 +38,9 @@ class MCTSStats(StatsBase):
     print(f"\t{self.rollouts} rollouts conducted ({self.rollouts / self.turns} per turn)")
 
 
-class MCTSPlayer(PlayerBase):
+class BaseMCTSPlayer(PlayerBase):
   """
-  Monte-Carlo Tree Search Player
+  Base Monte-Carlo Tree Search Player, used to build all the variants (and the normal one)
   """
   # Takes 2 arguments:
   argcount = 2
@@ -51,7 +52,6 @@ class MCTSPlayer(PlayerBase):
   # However, increasing the second increases the time each leaf takes to process,
   # so increasing it without the first may reduce skill instead.
  
-  name = "MCTSPlayer"
   argnames = ["execTime", "rollout"]
   stats: MCTSStats
   statsType = MCTSStats
@@ -75,7 +75,7 @@ class MCTSPlayer(PlayerBase):
       self.expand(leaf)
       reward = self.simulate(leaf)
       self.backup(path, reward)
-
+      
     # Find the best step by examining the current nodes's children
     # Do that until we find a node that ends our turn, or we reach four steps
     bestNode = max(root.children, key=self.score)
@@ -86,6 +86,7 @@ class MCTSPlayer(PlayerBase):
         break
       move.append(step)
       bestNode = max(bestNode.children, key=self.score)
+
     return tuple(move)
   
   def expand(self, node: Node):
@@ -144,6 +145,7 @@ class MCTSPlayer(PlayerBase):
       else:
         # If we lose, the "reward" is -1
         reward -= 1
+    
     return reward
   
   def backup(self, path: list[Node], reward: int):
@@ -181,3 +183,9 @@ class MCTSPlayer(PlayerBase):
     initial[0] = [RankChars.index(c) for c in text[:8]]
     initial[1] = [RankChars.index(c) for c in text[8:-1]]
     return initial
+
+class MCTSPlayer(BaseMCTSPlayer):
+  """
+  Basic MCTS player, just the base algorithm
+  """
+  name = "MCTSPlayer";

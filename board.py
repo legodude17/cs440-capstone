@@ -1,4 +1,5 @@
 import random
+import time
 from typing import Any, Generator, NewType, TypeVar
 
 Piece = NewType('Piece', int)
@@ -520,7 +521,9 @@ class Board:
     """
     if self.state.left == 0:
       raise StateException("Current player is out of steps, no possible moves")
-    steps = random.randint(1, self.state.left)
+    # Add some extra options on top to bias the randomness towards doing as many steps as possible
+    steps = random.randint(1, self.state.left + 3)
+    steps = min(steps, self.state.left)
     move = []
     savedState = self.encode()
     for _ in range(steps):

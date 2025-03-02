@@ -20,7 +20,7 @@ class StatsBase:
     print(self.name + ":")
     print(f"\tGames Played: {self.games} ({self.wins} Wins, {self.losses} Losses)")
     print(f"\tTurns taken: {self.turns} ({self.turns / self.games} per game)")
-    print(f"\tAverage of {self.time / self.turns}ms and {self.steps / self.turns} steps per turn")
+    print(f"\tAverage of {self.time / self.turns}s and {self.steps / self.turns} steps per turn")
 
 class PlayerBase:
   """
