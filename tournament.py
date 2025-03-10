@@ -1,3 +1,4 @@
+import time
 from typing import Tuple
 from game import Game, PlayerBase
 from board import COLORS
@@ -21,6 +22,7 @@ class Tournament:
     """
     Run the tournament
     """
+    startTime = time.time()
     games = 0
     for _ in range(self.rounds):
       for i in range(len(self.players)):
@@ -35,11 +37,12 @@ class Tournament:
           print(f"  {(player1 if winner == COLORS.GOLD else player2).name} wins!")
           self.wins[i if winner == COLORS.GOLD else j] += 1
           games += 1
-
+    elapsedTime = time.time() - startTime
     print()
     print(f"{games} games, results:")
     for i in range(len(self.wins)):
       print(f"  {self.players[i].name}: {self.wins[i]} wins ({self.wins[i] / games * 100:.2f})")
+    print(f"Tournament took {elapsedTime}s ({elapsedTime / games}s per game)")
 
 
 if __name__ == "__main__":
