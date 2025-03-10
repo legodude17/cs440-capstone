@@ -1,4 +1,3 @@
-from tracemalloc import start
 from board import Move, Step, Piece, RankChars
 from game import PlayerBase, StatsBase
 from typing import TypeVar
@@ -12,16 +11,18 @@ class Node:
   children: list[Self] # type: ignore
   parent: Self | None # type: ignore
   step: Step | None # The step that led to this node
+  player: int # The player making the step
   N: int # The number of times this node has been visited
   Q: int # The total reward of this node and all it's children
 
-  def __init__(self, boardState: str, parent: Self | None, step: Step | None) -> None: # type: ignore
+  def __init__(self, boardState: str, parent: Self | None, step: Step | None, player: int) -> None: # type: ignore
     self.children = []
     self.N = 0
     self.Q = 0
     self.boardState = boardState
     self.parent = parent
     self.step = step
+    self.player = player
 
 class MCTSStats(StatsBase):
   """
@@ -64,7 +65,7 @@ class BaseMCTSPlayer(PlayerBase):
 
   def choose_move(self, boardState: str) -> Move:
     startTime = time.time() # Keep track of execution time to limit calculation
-    root = Node(boardState, None, None)
+    root = Node(boardState, None, None, self.color)
     self.expand(root)
     while time.time() - startTime < self.execTime:
       # 1 iteration of MCTS:
@@ -96,19 +97,20 @@ class BaseMCTSPlayer(PlayerBase):
     if len(node.children) > 0:
       return
     self.board.decode(node.boardState)
+    player = self.board.state.player
     # If this is not the first step of the turn,
     # add the option to end the turn and not take any more steps
     if self.board.state.left != 4:
       self.board.finish_turn()
       self.stats.created += 1
-      node.children.append(Node(self.board.encode(), node, None))
+      node.children.append(Node(self.board.encode(), node, None, player))
       self.board.decode(node.boardState)
     for step in self.board.possible_steps():
       self.board.do_step(step)
       if self.board.state.left == 0:
         self.board.finish_turn()
       self.stats.created += 1
-      node.children.append(Node(self.board.encode(), node, step))
+      node.children.append(Node(self.board.encode(), node, step, player))
       self.board.decode(node.boardState)
 
   def select(self, node: Node):
