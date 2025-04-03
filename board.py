@@ -1,6 +1,8 @@
+import dis
 import random
-import time
 from typing import Any, Generator, NewType, TypeVar
+
+from util import chance
 
 Piece = NewType('Piece', int)
 
@@ -440,10 +442,12 @@ class Board:
         helped = True
     return frozen and not helped
   
-  def possible_steps(self) -> Generator[Step, Any, None]:
+  def possible_steps(self, discard: float = 0) -> Generator[Step, Any, None]:
     """
     Obtain all possible steps for the current player
     """
+    doneNormal = False
+    donePush = False
     for pos in all_positions():
       piece = self[pos]
       if piece == None:
@@ -466,20 +470,26 @@ class Board:
       for pos2 in neighbors(pos, exclude):
         enemy = self[pos2]
         if enemy == None:
-          yield Step.create(pos, pos2)
+          if discard <= 0 or not doneNormal or not chance(discard):
+            doneNormal = True
+            yield Step.create(pos, pos2)
         else:
           color2, rank2 = parse_piece(enemy)
           if color != color2 and rank > rank2:
             for pos3 in neighbors(pos2):
               if self[pos3] == None:
-                # Push the enemy onto a tile adjacent to them, then move to their old position
-                yield Step.create_push(pos, pos2, pos2, pos3)
+                if discard <= 0 or not donePush or not chance(discard):
+                  donePush = True
+                  # Push the enemy onto a tile adjacent to them, then move to their old position
+                  yield Step.create_push(pos, pos2, pos2, pos3)
             for pos3 in neighbors(pos):
               if self[pos3] == None:
-                # Step into an adjacent tile, them pull the enemy to my old tile
-                yield Step.create_push(pos, pos3, pos2, pos)
+                if discard <= 0 or not donePush or not chance(discard):
+                  donePush = True
+                  # Step into an adjacent tile, them pull the enemy to my old tile
+                  yield Step.create_push(pos, pos3, pos2, pos)
 
-  def possible_moves(self) -> Generator[Move, Any, None]:
+  def possible_moves(self, discard: float = 0) -> Generator[Move, Any, None]:
     """
     Obtain all possible moves for the current player.
     Caveat: This method mutates the board while iterating.
@@ -493,10 +503,11 @@ class Board:
       if self.state.left == 0:
         return
       savedState = self.encode()
-      for step in self.possible_steps():
+      for step in self.possible_steps(discard):
         self.do_step(step)
-        yield tuple(existing + [step]) #type: ignore
         yield from expand(existing + [step])
+        self.finish_turn()
+        yield tuple(existing + [step]) #type: ignore
         self.decode(savedState)
 
     yield from expand([])

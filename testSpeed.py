@@ -1,7 +1,9 @@
 import cProfile
 import pstats
+import sys
 
-# cProfile.run("import testGame", filename="profile.info")
+if len(sys.argv) > 1:
+  cProfile.run("import " + sys.argv[1], filename="profile.info")
 
 stats = pstats.Stats("profile.info")
 stats.strip_dirs()
