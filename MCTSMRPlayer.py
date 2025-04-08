@@ -1,5 +1,5 @@
 from MCTSPlayer import BaseMCTSPlayer, Node
-from minimax import minimax
+from minimax_moves import minimax
 
 class MCTSMRPlayer(BaseMCTSPlayer):
   name = "MCTSMRPlayer"

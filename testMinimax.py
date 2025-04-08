@@ -1,4 +1,4 @@
-from minimax import minimax
+from minimax_moves import minimax
 from board import Board, RankChars, COLORS
 
 with open("best_initial.txt") as f:
