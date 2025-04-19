@@ -1,6 +1,5 @@
 from board import Move
-from game import PlayerBase, StatsBase
-import random
+from game import PlayerBase
 
 class RandomPlayer(PlayerBase):
   """

@@ -6,7 +6,6 @@ inf = float("inf")
 def minimax(board: Board, depth: int, player: int, subset: float = 1):
   bestValue = -inf
   bestStep = None
-  boardState = board.encode()
 
   for step in board.possible_steps(1 - subset):
     board.do_step(step)
@@ -14,7 +13,7 @@ def minimax(board: Board, depth: int, player: int, subset: float = 1):
     if value > bestValue:
       bestValue = value
       bestStep = step
-    board.decode(boardState)
+    board.undo_step()
 
   return (bestStep, bestValue)
 
@@ -29,7 +28,6 @@ def minimax_internal(board: Board, depth: int, player: int, subset: float, alpha
     return -minimax_internal(board, depth, player, subset, -beta, -alpha)
   
   bestValue = -inf
-  boardState = board.encode()
 
   if board.state.left < 4:
     board.finish_turn()
@@ -40,8 +38,7 @@ def minimax_internal(board: Board, depth: int, player: int, subset: float, alpha
       alpha = value
       if alpha >= beta:
         return bestValue
-      
-  board.decode(boardState)
+    board.undo()
 
   for step in board.possible_steps(1 - subset):
     board.do_step(step)
@@ -54,6 +51,6 @@ def minimax_internal(board: Board, depth: int, player: int, subset: float, alpha
       if alpha >= beta:
         return bestValue
       
-    board.decode(boardState)
+    board.undo_step()
       
   return bestValue

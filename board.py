@@ -1,4 +1,3 @@
-import dis
 import random
 from typing import Any, Generator, NewType, TypeVar
 
@@ -162,6 +161,10 @@ def all_positions() -> Generator[Pos, Any, Any]:
     for j in range(8):
       yield (i, j) # type: ignore
 
+def pos_str(pos: Pos):
+    x, y = pos
+    return chr(x + 97) + str(8 - y)
+
 Self = TypeVar("Self", bound="Step")
 
 class Step:
@@ -199,18 +202,133 @@ class Step:
   
 Move = tuple[Step] | tuple[Step, Step] | tuple[Step, Step, Step] | tuple[Step, Step, Step, Step]
 
+def move_len(move: Move):
+  count = 0
+  for step in move:
+    count += 1
+    if step.opOldPos != None:
+      count += 1
+  return count
+
 class StateException(Exception):
   """
   Raised when a given action is invalid given the state of the board
   """
   pass
 
+class Event:
+  class Type:
+    Move = "MOVE"
+    Trap = "TRAP"
+    Turn = "TURN"
+    End = "END"
+
+  type: str
+  piece: Piece
+  player: int
+  count: int
+  pos1: Pos
+  pos2: Pos
+    
+
+class History:
+  events: list[Event] = []
+
+  def add_move(self, piece: Piece, oldPos: Pos, newPos: Pos):
+    event = Event()
+    event.type = Event.Type.Move
+    event.piece = piece
+    event.player,_ = parse_piece(piece)
+    event.pos1 = oldPos
+    event.pos2 = newPos
+    self.events.append(event)
+
+  def add_trap(self, piece: Piece, pos: Pos):
+    event = Event()
+    event.type = Event.Type.Trap
+    event.piece = piece
+    event.player,_ = parse_piece(piece)
+    event.pos1 = pos
+    self.events.append(event)
+
+  def add_turn(self, player: int, left: int):
+    event = Event()
+    event.type = Event.Type.Turn
+    event.player = player
+    event.count = left
+    self.events.append(event)
+
+  def add_end(self):
+    event = Event()
+    event.type = Event.Type.End
+    self.events.append(event)
+
+  def _undo_event(self, event: Event, board):
+    if event.type == Event.Type.Move:
+      if board[event.pos2] == event.piece:
+        board[event.pos2] = None
+      board[event.pos1] = event.piece
+      board.state.left += 1
+    elif event.type == Event.Type.Trap:
+      board[event.pos1] = event.piece
+    elif event.type == Event.Type.Turn:
+      board.state.player = event.player
+      board.state.left = event.count
+    elif event.type == Event.Type.End:
+      board.state.end = False
+
+  def undo(self, board):
+    if len(self.events) > 0:
+      event = self.events.pop()
+      self._undo_event(event, board)
+
+  def undo_step(self, board):
+    while len(self.events) > 0:
+      event = self.events.pop()
+      self._undo_event(event, board)
+      # If event moves the player's piece, then this is the first event of the step, so stop
+      if event.type == Event.Type.Move and event.player == board.state.player:
+        break
+
+  def undo_move(self, board):
+    event = self.events.pop()
+    self._undo_event(event, board)
+    if event.type == Event.Type.End:
+      event = self.events.pop()
+      self._undo_event(event, board)
+    player = event.player
+    while len(self.events) > 0:
+      event = self.events.pop()
+      # We undo until we find the end of the previous turn
+      if event.type == Event.Type.Turn and event.player == 1 - player:
+        break
+      self._undo_event(event, board)
+
+  def clear(self):
+    self.events.clear()
+
+  def print(self, last = None):
+    count = len(self.events)
+    if last != None:
+      count = last
+    print("History: Last", count, "events:")
+    for event in self.events[-count:]:
+      if event.type == Event.Type.Move:
+        print(event.type, piece_to_char(event.piece), "moves from", pos_str(event.pos1), "to", pos_str(event.pos2))
+      elif event.type == Event.Type.Trap:
+        print(event.type, piece_to_char(event.piece), "trapped at", pos_str(event.pos1))
+      elif event.type == Event.Type.Turn:
+        print(event.type, ColorNames[event.player], "passed", event.count, "steps left")
+      elif event.type == Event.Type.End:
+        print(event.type)
+      
 class Board:
   """
   Represents a board of Arimaa, including the current game state
   """
   _data: list[list[Piece | None]] # The pieces on the board None means empty
   state: State # The state of the game
+  history: History # The history of the game
 
   # The locations of the traps
   TRAPS: list[Pos] = [(2, 2), (2, 5), (5, 2), (5, 5)] # type: ignore
@@ -218,6 +336,7 @@ class Board:
   def __init__(self) -> None:
     self._data = []
     self.state = State()
+    self.history = History()
     # At the start, the gold player places their starting pieces
     self.state.setup = True
     self.state.end = False
@@ -283,7 +402,7 @@ class Board:
     """
     Execute a single step and modify the state as needed
     """
-    if self.state.left == 0:
+    if self.state.left < 1:
       raise StateException("Current player has no steps left.")
     toMove = self[step.oldPos]
     if toMove == None:
@@ -296,6 +415,8 @@ class Board:
 
     enemy = None
     if step.opOldPos != None:
+      if self.state.left < 2:
+        raise StateException("Pushs or pulls require 2 steps")
       enemy = self[step.opOldPos]
       if enemy == None:
         raise StateException("No piece at enemy location.")
@@ -317,15 +438,19 @@ class Board:
     if step.opOldPos != None:
       self[step.opOldPos] = None
     self[step.newPos] = toMove
+    self.state.left -= 1
+    self.history.add_move(toMove, step.oldPos, step.newPos)
     if step.opNewPos != None:
+      if self.state.left < 1:
+        raise StateException("Current player has no steps left.")
       self[step.opNewPos] = enemy
+      self.state.left -= 1
+      self.history.add_move(enemy, step.opOldPos, step.opNewPos) # type: ignore
 
     self._check_traps()
 
-    self.state.left -= 1
-
   def do_move(self, move: Move):
-    if self.state.left < len(move):
+    if self.state.left < move_len(move):
       raise StateException("Cannot make a move with more steps than are left.")
     for step in move:
       self.do_step(step)
@@ -338,6 +463,7 @@ class Board:
     if self.state.left == 4:
       raise StateException("Cannot fully pass the turn")
     
+    self.history.add_turn(self.state.player, self.state.left)
     self.state.player = 1 - self.state.player
     self.state.left = 4
 
@@ -345,6 +471,7 @@ class Board:
     if win != None:
       self.state.end = True
       self.state.player = win
+      self.history.add_end()
 
   def pieces(self):
     """
@@ -372,6 +499,7 @@ class Board:
               safe = True
               break
         if not safe:
+          self.history.add_trap(piece, trap)
           self[trap] = None
 
   def _check_win(self) -> int | None:
@@ -448,6 +576,8 @@ class Board:
     """
     doneNormal = False
     donePush = False
+    if self.state.left < 1:
+      return
     for pos in all_positions():
       piece = self[pos]
       if piece == None:
@@ -473,7 +603,7 @@ class Board:
           if discard <= 0 or not doneNormal or not chance(discard):
             doneNormal = True
             yield Step.create(pos, pos2)
-        else:
+        elif self.state.left > 1:
           color2, rank2 = parse_piece(enemy)
           if color != color2 and rank > rank2:
             for pos3 in neighbors(pos2):
@@ -502,13 +632,12 @@ class Board:
     def expand(existing: list[Step]) -> Generator[Move, Any, None]:
       if self.state.left == 0:
         return
-      savedState = self.encode()
       for step in self.possible_steps(discard):
         self.do_step(step)
         yield from expand(existing + [step])
         self.finish_turn()
         yield tuple(existing + [step]) #type: ignore
-        self.decode(savedState)
+        self.undo_step()
 
     yield from expand([])
 
@@ -536,15 +665,24 @@ class Board:
     steps = random.randint(1, self.state.left + 3)
     steps = min(steps, self.state.left)
     move = []
-    savedState = self.encode()
+    boardState = self.encode()
     for _ in range(steps):
       step = self.random_step()
       if step == None:
         break
       move.append(step)
       self.do_step(step)
-    self.decode(savedState)
+    self.decode(boardState)
     return tuple(move)
+  
+  def undo(self):
+    self.history.undo(self)
+  
+  def undo_step(self):
+    self.history.undo_step(self)
+
+  def undo_move(self):
+    self.history.undo_move(self)
 
   def print(self):
     """
@@ -586,6 +724,7 @@ class Board:
     """
     s, b = val.split(" ")
     self.state.decode(s)
+    self.history.clear()
 
     i = 0
     for pos in all_positions():

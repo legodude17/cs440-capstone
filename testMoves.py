@@ -1,4 +1,3 @@
-from minimax_moves import minimax
 from board import Board, RankChars, COLORS
 
 with open("best_initial.txt") as f:
@@ -9,6 +8,4 @@ board = Board()
 board.place_initial(COLORS.GOLD, initial[COLORS.GOLD])
 board.place_initial(COLORS.SILVER, initial[COLORS.SILVER])
 
-move = minimax(board, 2, COLORS.GOLD, 0.5)
-
-print(board.move_str(move))
+print(len(list(board.possible_moves())))

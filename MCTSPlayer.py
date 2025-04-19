@@ -104,14 +104,14 @@ class BaseMCTSPlayer(PlayerBase):
       self.board.finish_turn()
       self.stats.created += 1
       node.children.append(Node(self.board.encode(), node, None, player))
-      self.board.decode(node.boardState)
+      self.board.undo()
     for step in self.board.possible_steps():
       self.board.do_step(step)
       if self.board.state.left == 0:
         self.board.finish_turn()
       self.stats.created += 1
       node.children.append(Node(self.board.encode(), node, step, player))
-      self.board.decode(node.boardState)
+      self.board.undo_step()
 
   def select(self, node: Node):
     """
