@@ -81,11 +81,19 @@ class BaseMCTSPlayer(PlayerBase):
     # Do that until we find a node that ends our turn, or we reach four steps
     bestNode = max(root.children, key=self.score)
     move = []
-    for _ in range(4):
+    steps = 0
+    while steps < 4:
       step = bestNode.step
       if step == None:
         break
+      if steps == 3 and step.opOldPos != None:
+        break
       move.append(step)
+      steps += 1
+      if step.opOldPos != None:
+        steps += 1
+      if len(bestNode.children) == 0:
+        break
       bestNode = max(bestNode.children, key=self.score)
 
     return tuple(move)
