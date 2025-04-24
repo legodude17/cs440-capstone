@@ -160,7 +160,10 @@ if __name__ == "__main__":
   player1 = Player1Class(*args[1:n1+1])
   player2 = Player2Class(*args[n1+2:n1+2+n2+1])
   game = Game(player1, player2)
-  game.play(True)
+  startTime = time.time()
+  winner = game.play(True)
+  elapsedTime = time.time() - startTime
+  print(f"{player1.name if winner == COLORS.GOLD else player2.name} won in {elapsedTime}s")
   if not os.access("stats", os.R_OK):
     os.mkdir("stats")
   i = 1
