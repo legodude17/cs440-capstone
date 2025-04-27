@@ -6,6 +6,7 @@ class StatsBase:
   Holds stats of the bots
   """
   name: str # The name of the bot with these stats
+  type: str # The type of the bot with these stats
   wins: int = 0 # The number of times the bot won a game
   losses: int = 0 # The number of times the bot lost a game
   games: int = 0 # The number of games the bot has played
@@ -13,8 +14,9 @@ class StatsBase:
   turns: int = 0 # Total amount of turns the bot took
   steps: int = 0 # Total amount of steps the bot played
 
-  def __init__(self, name: str):
+  def __init__(self, name: str, type: str):
     self.name = name
+    self.type = type
 
   def print(self):
     print(self.name + ":")
@@ -44,7 +46,7 @@ class PlayerBase:
     else:
       self.name += "()"
     self.board = Board()
-    self.stats = self.__class__.statsType(self.name)
+    self.stats = self.__class__.statsType(self.name, self.__class__.name)
 
   def choose_step(self) -> Step | None:
     """
@@ -68,6 +70,8 @@ class PlayerBase:
       self.board.decode(boardState)
       move.append(step)
       self.board.do_step(step)
+      if self.board.state.left == 0:
+        break
       boardState = self.board.encode()
     return tuple(move)
   

@@ -183,3 +183,6 @@ best_initial.txt
 # Gathered data
 stats
 profile.info
+
+# Generated plots
+*.png
